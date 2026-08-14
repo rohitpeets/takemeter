@@ -1,4 +1,4 @@
-# ai201-project3-takemeter# TakeMeter
+# TakeMeter
 
 A fine-tuned text classifier that evaluates discourse quality in r/soccer, Reddit's largest football community. TakeMeter classifies comments into four categories — Analysis, Prediction, Reaction, and Humor — and compares a fine-tuned DistilBERT model against a zero-shot Groq baseline.
 
