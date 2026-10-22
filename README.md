@@ -80,7 +80,39 @@ Possible: Humor, Reaction → **Humor.** The framing is entirely constructed for
 
 ---
 
-## Evaluation
+## 5-Fold Cross-Validation (Oct 2026)
+
+The original evaluation below scored the fine-tuned model on 24 held-out comments and the baseline on a *different* 30, so the two were never compared on the same comments. This re-evaluation supersedes it.
+
+**Setup:** 5-fold stratified cross-validation over all 288 labeled comments (`takemeter_300.csv`; the run used a CRLF copy, sha256 `a769168b…d174c`, which has the same 288 rows as this repo's LF copy, sha256 `b6f12d0b…de222`; seed 42). In every fold both models are scored on the same held-out comments (57–58 per fold, every comment scored exactly once). DistilBERT keeps the original hyperparameters (20 epochs, lr 5e-5, batch 16), uses all training-fold rows without downsampling, and picks its checkpoint on a validation split taken from the training fold.
+
+**Baseline model change:** Groq retired `llama-3.3-70b-versatile` on 2026-08-16, so the zero-shot baseline here is `openai/gpt-oss-120b` (reasoning effort low) on Groq, not the original 70B model. 0 of 288 baseline replies were unparseable.
+
+| Model | Macro F1 (mean ± std, 5 folds) | Accuracy (mean ± std) | Pooled macro F1 [95% CI] |
+|---|---|---|---|
+| Fine-tuned DistilBERT (66M) | 0.542 ± 0.043 | 0.549 ± 0.048 | 0.545 [0.488, 0.600] |
+| Zero-shot gpt-oss-120b | 0.518 ± 0.039 | 0.524 ± 0.036 | 0.521 [0.458, 0.579] |
+
+**Difference (fine-tuned − baseline), pooled macro F1:** +0.024, paired bootstrap 95% CI [−0.049, +0.099]. The CI includes zero, so the two models are statistically indistinguishable on this data. Fine-tuning scored higher in 3 of 5 folds.
+
+**Per-class F1 (pooled over all 288 comments):**
+
+| Label | Fine-tuned | Baseline |
+|---|---|---|
+| analysis | 0.70 | 0.51 |
+| prediction | 0.56 | 0.65 |
+| reaction | 0.46 | 0.53 |
+| humor | 0.46 | 0.38 |
+
+The fine-tuned model leads on Analysis and Humor; the baseline leads on Prediction and Reaction. This differs from the per-class pattern in the original single split, which rested on 6–12 examples per class.
+
+Raw outputs: `cv/takemeter_cv_results.json` (summary, CIs, per-class F1) and `cv/takemeter_cv_per_fold.csv` (per-fold scores).
+
+---
+
+## Evaluation (original single split, superseded)
+
+> Superseded by the 5-fold cross-validation above. The two models below were scored on different test sets (24 vs 30 comments). The baseline accuracy is listed as 0.750, but its own per-class table gives 18/30 = 0.60.
 
 ### Test Set Performance
 
@@ -195,6 +227,8 @@ A documented edge case from planning.md — sarcastic outcome claims. The commen
 
 ## What the Model Learned vs What Was Intended
 
+> Written for the original single split. In the 5-fold cross-validation above, the per-class pattern changed (fine-tuned leads on Analysis and Humor, trails on Prediction and Reaction) and the macro F1 gap is not significant.
+
 **What it learned:**
 - Vocabulary patterns associated with each class (football evaluation words → Analysis, future tense → Prediction)
 - Community-specific Humor phrasing — jokes about Mbappe being a "dictator", Haaland as a lab-designed striker, absurdist record comparisons
@@ -212,6 +246,8 @@ The zero-shot LLM (70B parameters, deep football pretraining) has a strong prior
 
 ## Reflection
 
+> Written for the original single split. In the 5-fold cross-validation above, the per-class pattern changed (fine-tuned leads on Analysis and Humor, trails on Prediction and Reaction) and the macro F1 gap is not significant.
+
 The classifier did not meet the original success threshold of 75% accuracy and 5-point improvement over baseline (baseline: 0.750, fine-tuned: 0.625, regression: -0.125). However it revealed something more interesting: **fine-tuning a small model on limited community data produces a more balanced classifier** (macro F1 0.58 → 0.62) even when overall accuracy doesn't improve.
 
 The Reaction label is the weakest point — merging Opinion and Reaction created a noisy class covering two conceptually different things. A future version with separate Opinion and Reaction labels and 200+ examples per class would likely improve significantly, especially with the 5-label taxonomy the project originally designed.
@@ -225,7 +261,8 @@ The Reaction label is the weakest point — merging Opinion and Reaction created
 ├── README.md                 # This file
 ├── takemeter_balanced.csv    # Training dataset (160 examples, 40 per label)
 ├── confusion_matrix.png      # Confusion matrix from fine-tuned model
-└── evaluation_results.json   # Side-by-side baseline vs fine-tuned metrics
+├── evaluation_results.json   # Original single-split metrics (superseded)
+└── cv/                       # 5-fold cross-validation outputs (Oct 2026)
 ```
 
 ---
